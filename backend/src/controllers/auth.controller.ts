@@ -52,8 +52,8 @@ export const login = async (req: Request, res: Response) => {
         role: employee.role,
       },
     });
-  } catch (error) {
-    return res.status(500).json({ error: 'Internal server error during login' });
+  } catch (err: any) {
+    return res.status(500).json({ error: `Internal server error during login ${err.message}` });
   }
 };
 
