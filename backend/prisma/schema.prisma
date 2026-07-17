@@ -1,13 +1,48 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
-generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
-}
-
 datasource db {
   provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPER_ADMIN
+  HR_MANAGER
+  EMPLOYEE
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+model Employee {
+  id           String   @id @default(uuid())
+  employeeId   String   @unique
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String
+  department   String
+  designation  String
+  salary       Float
+  joiningDate  DateTime
+  status       Status   @default(ACTIVE)
+  role         Role     @default(EMPLOYEE)
+  profileImage String?
+
+  // Self-referential relationship for Organizational Hierarchy
+  managerId String?
+  manager   Employee?  @relation("ReportingHierarchy", fields: [managerId], references: [id])
+  reportees Employee[] @relation("ReportingHierarchy")
+
+  // Soft Delete flags & Auditing metadata
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([email])
+  @@index([employeeId])
 }
