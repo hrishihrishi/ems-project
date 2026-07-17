@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import './index.css'
+import { LoginForm } from './components/LoginForm';
 
 const queryClient = new QueryClient();
 
@@ -59,7 +60,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path="/login" element={<div className="p-8 text-center">Login Form Component Space</div>} />
+      <Route path="/login" element={<div className="p-8 text-center"><LoginForm/></div>} />
       <Route path="/dashboard" element={<ProtectedRoute><DashboardPlaceholder /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>

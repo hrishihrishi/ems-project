@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Role } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { prisma } from '../utils/prisma.js';
 
-const prisma = new PrismaClient();
+// const prisma = new PrismaClient();
 
 // 1. CREATE EMPLOYEE
 export const createEmployee = async (req: Request, res: Response) => {

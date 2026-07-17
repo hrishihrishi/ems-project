@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import employeeRoutes from './routes/employee.routes.js';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -10,6 +11,9 @@ const app = express();
 
 app.use(express.json());
 app.use(cookieParser());
+
+app.use(cors({ credentials: true, origin: 'http://localhost:5173' }));
+
 
 // Routing Endpoints Mounted Cleanly
 app.use('/api/auth', authRoutes);
