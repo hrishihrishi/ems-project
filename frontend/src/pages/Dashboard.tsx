@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DashboardMetrics } from '../components/DashboardMetrics';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { HierarchyVisualizer } from '../components/HierarchyVisualizer';
-import { LayoutDashboard, TableProperties, Network, Moon, Sun, LogOut, Plus } from 'lucide-react';
+import { LayoutDashboard, TableProperties, Network, Moon, Sun, LogOut, Plus, Download, Upload } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
 import { EmployeeFormModal, type EmployeeFormData } from '../components/EmployeeFormModal';
@@ -115,6 +115,44 @@ export const DashboardPage: React.FC = () => {
   const employees = employeesData || [];
   const hierarchyTree = treeData || [];
 
+  // CSV Export — generate and download a CSV from the current employees list
+  const csvImportRef = useRef<HTMLInputElement>(null);
+
+  const handleCSVExport = () => {
+    if (!employees.length) return;
+    const headers = ['employeeId','name','email','phone','department','designation','salary','joiningDate','status','role'];
+    const rows = employees.map((e: any) =>
+      headers.map(h => JSON.stringify(e[h] ?? '')).join(',')
+    );
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `employees_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      await api.post('/employees/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      alert('CSV imported successfully!');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'CSV import failed');
+    } finally {
+      // Reset file input so same file can be re-imported if needed
+      if (csvImportRef.current) csvImportRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
@@ -183,14 +221,33 @@ export const DashboardPage: React.FC = () => {
             </button>
           </div>
 
-          {/* New Add Employee Action Button */}
+          {/* CSV import hidden file input */}
+          <input ref={csvImportRef} type="file" accept=".csv" className="hidden" onChange={handleCSVImport} />
+
+          {/* Directory Action Buttons */}
           {(user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER') && activeTab === 'directory' && (
-            <button
-              onClick={openCreateModal}
-              className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Add Employee
-            </button>
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                onClick={handleCSVExport}
+                title="Export CSV"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Export CSV
+              </button>
+              <button
+                onClick={() => csvImportRef.current?.click()}
+                title="Import CSV"
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                <Upload className="w-4 h-4" /> Import CSV
+              </button>
+              <button
+                onClick={openCreateModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Add Employee
+              </button>
+            </div>
           )}
         </div>
 
@@ -212,6 +269,7 @@ export const DashboardPage: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleModalSubmit}
         initialData={editingEmployee}
+        allEmployees={employees}
       />
     </div>
   );
