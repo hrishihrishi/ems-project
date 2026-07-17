@@ -23,10 +23,12 @@ export const DashboardPage: React.FC = () => {
       document.documentElement.classList.remove('dark');
       localStorage.setItem('theme', 'light');
       setIsDark(false);
+      console.log("switched to light mode");
     } else {
       document.documentElement.classList.add('dark');
       localStorage.setItem('theme', 'dark');
       setIsDark(true);
+      console.log("switched to dark mode");
     }
   };
 
