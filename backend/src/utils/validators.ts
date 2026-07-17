@@ -26,7 +26,7 @@ export const validateBody = (schema: z.ZodSchema) => {
     const result = await schema.safeParseAsync(req.body);
     if (!result.success) {
       return res.status(400).json({
-        error: 'Validation failed',
+        error: `Validation failed ${result}`,
         details: result.error.flatten().fieldErrors,
       });
     }

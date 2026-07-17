@@ -3,15 +3,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DashboardMetrics } from '../components/DashboardMetrics';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { HierarchyVisualizer } from '../components/HierarchyVisualizer';
-import { LayoutDashboard, TableProperties, Network, Moon, Sun, LogOut } from 'lucide-react';
+import { LayoutDashboard, TableProperties, Network, Moon, Sun, LogOut, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../utils/api';
+import { EmployeeFormModal, type EmployeeFormData } from '../components/EmployeeFormModal';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'metrics' | 'directory' | 'hierarchy'>('metrics');
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  // Modal State Management
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<EmployeeFormData | null>(null);
 
   const toggleTheme = () => {
     if (isDark) {
@@ -43,7 +48,7 @@ export const DashboardPage: React.FC = () => {
     }
   });
 
-  // Action Mutation Pipeline
+  // Action Mutation Pipelines
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/employees/${id}`);
@@ -54,6 +59,35 @@ export const DashboardPage: React.FC = () => {
     }
   });
 
+  const createMutation = useMutation({
+    mutationFn: async (data: Partial<EmployeeFormData>) => {
+      await api.post('/employees', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
+      setIsModalOpen(false);
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.error || 'Failed to create employee');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: Partial<EmployeeFormData>) => {
+      const { id, ...payload } = data; // Strip ID from payload
+      await api.put(`/employees/${id}`, payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
+      setIsModalOpen(false);
+    },
+    onError: (error: any) => {
+      alert(error.response?.data?.error || 'Failed to update employee');
+    }
+  });
+
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to softly delete this employee?')) {
       deleteMutation.mutate(id);
@@ -61,8 +95,21 @@ export const DashboardPage: React.FC = () => {
   };
 
   const handleEdit = (emp: any) => {
-    // Scaffold hook designed for any external update form module
-    alert(`Editing logic for ${emp.name} goes here`);
+    setEditingEmployee(emp);
+    setIsModalOpen(true);
+  };
+
+  const openCreateModal = () => {
+    setEditingEmployee(null);
+    setIsModalOpen(true);
+  };
+
+  const handleModalSubmit = (data: Partial<EmployeeFormData>) => {
+    if (editingEmployee) {
+      updateMutation.mutate({ ...data, id: editingEmployee.id });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const employees = employeesData || [];
@@ -100,39 +147,51 @@ export const DashboardPage: React.FC = () => {
       </header>
 
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
-          <button
-            onClick={() => setActiveTab('metrics')}
-            className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
-              activeTab === 'metrics'
-                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <LayoutDashboard className="w-4 h-4" /> Analytical Core
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('directory')}
-            className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
-              activeTab === 'directory'
-                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <TableProperties className="w-4 h-4" /> Staff Directory
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('hierarchy')}
-            className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
-              activeTab === 'hierarchy'
-                ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
-                : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            <Network className="w-4 h-4" /> Reporting Tree
-          </button>
+        <div className="flex justify-between items-end border-b border-slate-200 dark:border-slate-800">
+          <div className="flex gap-6">
+            <button
+              onClick={() => setActiveTab('metrics')}
+              className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
+                activeTab === 'metrics'
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4" /> Analytical Core
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('directory')}
+              className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
+                activeTab === 'directory'
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <TableProperties className="w-4 h-4" /> Staff Directory
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('hierarchy')}
+              className={`flex items-center gap-2 pb-3 text-sm font-bold tracking-wide transition border-b-2 cursor-pointer ${
+                activeTab === 'hierarchy'
+                  ? 'border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              <Network className="w-4 h-4" /> Reporting Tree
+            </button>
+          </div>
+
+          {/* New Add Employee Action Button */}
+          {(user?.role === 'SUPER_ADMIN' || user?.role === 'HR_MANAGER') && activeTab === 'directory' && (
+            <button
+              onClick={openCreateModal}
+              className="mb-2 flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg transition-colors shadow-sm cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Employee
+            </button>
+          )}
         </div>
 
         <div className="animate-fadeIn duration-200">
@@ -147,6 +206,13 @@ export const DashboardPage: React.FC = () => {
           )}
         </div>
       </main>
+
+      <EmployeeFormModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleModalSubmit}
+        initialData={editingEmployee}
+      />
     </div>
   );
 };
