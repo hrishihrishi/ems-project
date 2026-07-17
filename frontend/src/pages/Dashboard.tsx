@@ -1,47 +1,15 @@
 import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { DashboardMetrics } from '../components/DashboardMetrics';
 import { EmployeeTable } from '../components/EmployeeTable';
 import { HierarchyVisualizer } from '../components/HierarchyVisualizer';
 import { LayoutDashboard, TableProperties, Network, Moon, Sun, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-// Production Mock Dataset validating all internal constraints safely
-const MOCK_DATASET: any[] = [
-  { id: '1', employeeId: 'EMS-001', name: 'Sarah Jenkins', email: 's.jenkins@corp.com', role: 'SUPER_ADMIN', department: 'Executive Office', designation: 'Chief Executive Officer', salary: 245000, joiningDate: '2021-01-15', status: 'ACTIVE' },
-  { id: '2', employeeId: 'EMS-002', name: 'Marcus Vance', email: 'm.vance@corp.com', role: 'HR_MANAGER', department: 'Human Resources', designation: 'HR Director', salary: 115000, joiningDate: '2022-03-10', status: 'ACTIVE', managerId: '1' },
-  { id: '3', employeeId: 'EMS-003', name: 'Elena Rostova', email: 'e.rostova@corp.com', role: 'EMPLOYEE', department: 'Engineering', designation: 'Lead Architect', salary: 168000, joiningDate: '2022-07-22', status: 'ACTIVE', managerId: '1' },
-  { id: '4', employeeId: 'EMS-004', name: 'David Kim', email: 'd.kim@corp.com', role: 'EMPLOYEE', department: 'Engineering', designation: 'Senior Dev', salary: 125000, joiningDate: '2023-11-01', status: 'ACTIVE', managerId: '3' },
-  { id: '5', employeeId: 'EMS-005', name: 'Amara Okafor', email: 'a.okafor@corp.com', role: 'EMPLOYEE', department: 'Human Resources', designation: 'Recruiter', salary: 72000, joiningDate: '2024-02-14', status: 'INACTIVE', managerId: '2' }
-];
-
-const MOCK_TREE_DATASET = [
-  {
-    id: '1',
-    name: 'Sarah Jenkins',
-    designation: 'Chief Executive Officer',
-    reportees: [
-      {
-        id: '2',
-        name: 'Marcus Vance',
-        designation: 'HR Director',
-        reportees: [
-          { id: '5', name: 'Amara Okafor', designation: 'Recruiter', reportees: [] }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Elena Rostova',
-        designation: 'Lead Architect',
-        reportees: [
-          { id: '4', name: 'David Kim', designation: 'Senior Dev', reportees: [] }
-        ]
-      }
-    ]
-  }
-];
+import api from '../utils/api';
 
 export const DashboardPage: React.FC = () => {
   const { user, logout } = useAuth();
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'metrics' | 'directory' | 'hierarchy'>('metrics');
   const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
 
@@ -57,9 +25,51 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
+  // Fetch Employees
+  const { data: employeesData, isLoading: isEmployeesLoading } = useQuery({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const response = await api.get('/employees?limit=1000');
+      return response.data.data;
+    }
+  });
+
+  // Fetch Organization Tree
+  const { data: treeData, isLoading: isTreeLoading } = useQuery({
+    queryKey: ['hierarchy'],
+    queryFn: async () => {
+      const response = await api.get('/organization/tree');
+      return response.data;
+    }
+  });
+
+  // Action Mutation Pipeline
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/employees/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['hierarchy'] });
+    }
+  });
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to softly delete this employee?')) {
+      deleteMutation.mutate(id);
+    }
+  };
+
+  const handleEdit = (emp: any) => {
+    // Scaffold hook designed for any external update form module
+    alert(`Editing logic for ${emp.name} goes here`);
+  };
+
+  const employees = employeesData || [];
+  const hierarchyTree = treeData || [];
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
-      {/* Upper Navigation Architecture Bar */}
       <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center justify-between shadow-sm sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black tracking-tighter text-lg">EM</div>
@@ -89,9 +99,7 @@ export const DashboardPage: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Framework Content Layout */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
-        {/* Navigation Tabs Bar switcher */}
         <div className="flex border-b border-slate-200 dark:border-slate-800 gap-6">
           <button
             onClick={() => setActiveTab('metrics')}
@@ -127,11 +135,16 @@ export const DashboardPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Dynamic Display Mount Slots */}
         <div className="animate-fadeIn duration-200">
-          {activeTab === 'metrics' && <DashboardMetrics data={MOCK_DATASET} />}
-          {activeTab === 'directory' && <EmployeeTable employees={MOCK_DATASET} />}
-          {activeTab === 'hierarchy' && <HierarchyVisualizer treeData={MOCK_TREE_DATASET} />}
+          {activeTab === 'metrics' && (
+            isEmployeesLoading ? <div className="p-8 text-center text-slate-500">Loading metrics...</div> : <DashboardMetrics data={employees} />
+          )}
+          {activeTab === 'directory' && (
+            isEmployeesLoading ? <div className="p-8 text-center text-slate-500">Loading directory...</div> : <EmployeeTable employees={employees} onDelete={handleDelete} onEdit={handleEdit} />
+          )}
+          {activeTab === 'hierarchy' && (
+            isTreeLoading ? <div className="p-8 text-center text-slate-500">Loading hierarchy...</div> : <HierarchyVisualizer treeData={hierarchyTree} />
+          )}
         </div>
       </main>
     </div>
