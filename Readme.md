@@ -57,8 +57,9 @@ This project demonstrates a production-style full-stack implementation with:
 - Soft delete behavior instead of hard deleti
 
 ## Deployment & other Links
-Github Repository - https://github.com/hrishihrishi/ems-project
-Deployed on - https://ems-projecr-9mwlqdbue-hrishihs-projects.vercel.app/dashboard
+- Github Repository - https://github.com/hrishihrishi/ems-project
+- Deployed on - https://ems-projecr-9mwlqdbue-hrishihs-projects.vercel.app/dashboard
+- Demo video - https://drive.google.com/file/d/1K3dZdvR3bjxW88TWsk05SL3ZCtz0AAc3/view?usp=sharing
 
 
 ## Tech Stack
@@ -162,7 +163,7 @@ The backend API should run at:
 
 Seed data creates the following accounts:
 
-- Super Admin: admin@ems.com / password123
+- Super Admin: hrishi@ems.com / password123
 - HR Manager: hr@ems.com / password123
 - Employee: employee@ems.com / password123
 
@@ -184,14 +185,6 @@ Seed data creates the following accounts:
 
 ### Organization
 - GET /api/organization/tree
-
-## Deployment Notes
-
-The frontend is configured for Vercel-style deployments, and the backend can be deployed to services like Render, Railway, or Vercel Functions depending on the hosting strategy.
-
-## Screenshots / Demo
-
-Add screenshots of the login page, dashboard, employee directory, and hierarchy view here to make the project presentation-ready.
 
 ## Assignment Summary
 

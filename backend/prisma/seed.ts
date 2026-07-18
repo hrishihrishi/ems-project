@@ -23,8 +23,8 @@ async function main() {
   // 3. Seed the System Super Admin
   const superAdmin = await prisma.employee.create({
     data: {
-      employeeId: "EMP001", // 👈 Added custom mandatory employee ID string
-      name: "Alex SuperAdmin",
+      employeeId: "EMP001", 
+      name: "Hrishi SuperAdmin",
       email: "admin@ems.com",
       passwordHash: hashedPassword,
       role: "SUPER_ADMIN", 
@@ -41,7 +41,7 @@ async function main() {
   // 4. Seed the HR Manager (Reports to Super Admin)
   const hrManager = await prisma.employee.create({
     data: {
-      employeeId: "EMP002", // 👈 Added mandatory employee ID
+      employeeId: "EMP002", 
       name: "Sarah HR",
       email: "hr@ems.com",
       passwordHash: hashedPassword,
@@ -60,7 +60,7 @@ async function main() {
   // 5. Seed a Standard Employee (Reports to HR Manager)
   const employee = await prisma.employee.create({
     data: {
-      employeeId: "EMP003", // 👈 Added mandatory employee ID
+      employeeId: "EMP003", 
       name: "John Doe",
       email: "employee@ems.com",
       passwordHash: hashedPassword,
