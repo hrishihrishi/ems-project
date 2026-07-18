@@ -1,4 +1,4 @@
 backend/node_modules
 backend/dist
 .env
-dusty.md
+STEPS.md
